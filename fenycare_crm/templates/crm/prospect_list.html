@@ -1,0 +1,295 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Prospects - FenyCare CRM{% endblock %}
+
+{% block extra_css %}
+<style>
+    .kpi-card {
+        transition: transform 0.2s;
+        border-radius: 10px;
+        border-left: 5px solid #0d6efd;
+    }
+
+    .kpi-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    }
+
+    .kpi-icon {
+        font-size: 2.5rem;
+        color: #0d6efd;
+        opacity: 0.8;
+    }
+
+    .kpi-value {
+        font-size: 1.8rem;
+        font-weight: bold;
+        color: #333;
+    }
+
+    .prospect-row:hover {
+        background-color: #f8f9fa;
+    }
+
+    .pipeline-value {
+        font-size: 1.1rem;
+        color: #198754;
+        font-weight: bold;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4 align-items-center">
+    <div class="col-md-6">
+        <h2 class="mb-0"><i class="bi bi-funnel text-primary"></i> Gestion des Prospects</h2>
+        <p class="text-muted">Pipeline et suivi des prospects</p>
+    </div>
+    <div class="col-md-6 text-md-end">
+        <a href="{% url 'prospect_create' %}" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> Nouveau Prospect
+        </a>
+    </div>
+</div>
+
+<!-- Statistiques Pipeline -->
+<div class="row mb-4">
+    <div class="col-md-2">
+        <div class="card kpi-card h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">Total</h6>
+                        <div class="kpi-value">{{ stats.total }}</div>
+                    </div>
+                    <div class="kpi-icon"><i class="bi bi-people"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card kpi-card h-100" style="border-left-color: #0d6efd;">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">Prospects</h6>
+                        <div class="kpi-value">{{ stats.prospects }}</div>
+                    </div>
+                    <div class="kpi-icon" style="color: #0d6efd;"><i class="bi bi-person-plus"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card kpi-card h-100" style="border-left-color: #ffc107;">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">En Cours</h6>
+                        <div class="kpi-value">{{ stats.en_cours }}</div>
+                    </div>
+                    <div class="kpi-icon" style="color: #ffc107;"><i class="bi bi-clock"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card kpi-card h-100" style="border-left-color: #198754;">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">Gagnés</h6>
+                        <div class="kpi-value">{{ stats.gagnes }}</div>
+                    </div>
+                    <div class="kpi-icon" style="color: #198754;"><i class="bi bi-check-circle"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card kpi-card h-100" style="border-left-color: #dc3545;">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">Perdus</h6>
+                        <div class="kpi-value">{{ stats.perdus }}</div>
+                    </div>
+                    <div class="kpi-icon" style="color: #dc3545;"><i class="bi bi-x-circle"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card kpi-card h-100" style="border-left-color: #6c757d;">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">Valeur Pipeline</h6>
+                        <div class="pipeline-value">{{ stats.valeur_pipeline|floatformat:0 }} €</div>
+                    </div>
+                    <div class="kpi-icon" style="color: #6c757d;"><i class="bi bi-currency-euro"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filtres -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-6">
+                <label for="search" class="form-label">Recherche</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                    <input type="text" class="form-control" id="search" name="search" value="{{ search }}" placeholder="Nom, prénom, email, entreprise...">
+                </div>
+            </div>
+            <div class="col-md-4">
+                <label for="statut" class="form-label">Statut</label>
+                <select class="form-select" id="statut" name="statut">
+                    <option value="">Tous les statuts</option>
+                    <option value="prospect" {% if statut == 'prospect' %}selected{% endif %}>Prospect</option>
+                    <option value="en_cours" {% if statut == 'en_cours' %}selected{% endif %}>En cours</option>
+                    <option value="gagne" {% if statut == 'gagne' %}selected{% endif %}>Gagné</option>
+                    <option value="perdu" {% if statut == 'perdu' %}selected{% endif %}>Perdu</option>
+                </select>
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary me-2">
+                    <i class="bi bi-filter"></i> Filtrer
+                </button>
+                <a href="{% url 'prospect_list' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-x-circle"></i> Réinitialiser
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Liste des prospects -->
+<div class="card">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <h5 class="card-title mb-0">Liste des Prospects</h5>
+        <small class="text-muted">{{ prospects.paginator.count }} prospect{{ prospects.paginator.count|pluralize:"s" }}</small>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover table-striped mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Prospect</th>
+                        <th>Statut</th>
+                        <th>Contact</th>
+                        <th class="text-end">Montant Estimé</th>
+                        <th class="text-center">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for prospect in prospects %}
+                    <tr class="prospect-row">
+                        <td>
+                            <strong>{{ prospect.nom }} {{ prospect.prenom|default:"" }}</strong>
+                            {% if prospect.entreprise %}<br><small class="text-muted">{{ prospect.entreprise }}</small>{% endif %}
+                            {% if prospect.responsable %}<br><small class="text-muted"><i class="bi bi-person"></i> {{ prospect.responsable.get_full_name }}</small>{% endif %}
+                        </td>
+                        <td>
+                            <span class="badge bg-{% if prospect.statut == 'prospect' %}primary{% elif prospect.statut == 'en_cours' %}warning{% elif prospect.statut == 'gagne' %}success{% else %}danger{% endif %}">
+                                {{ prospect.get_statut_display }}
+                            </span>
+                            {% if prospect.converti_en_client %}
+                                <br><small class="text-success"><i class="bi bi-check-circle"></i> Converti</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if prospect.email %}<i class="bi bi-envelope"></i> {{ prospect.email }}<br>{% endif %}
+                            {% if prospect.telephone %}<i class="bi bi-telephone"></i> {{ prospect.telephone }}{% endif %}
+                        </td>
+                        <td class="text-end">
+                            {% if prospect.montant_estime %}
+                                <strong class="text-success">{{ prospect.montant_estime|floatformat:0 }} €</strong>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            <div class="btn-group" role="group">
+                                <a href="{% url 'prospect_detail' prospect.pk %}" class="btn btn-sm btn-outline-primary" title="Voir détails">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                <a href="{% url 'prospect_edit' prospect.pk %}" class="btn btn-sm btn-outline-secondary" title="Modifier">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                            
+                                {% if prospect.statut != 'gagne' and not prospect.converti_en_client %}
+                                <a href="{% url 'prospect_convert' prospect.pk %}" class="btn btn-sm btn-outline-success" title="Convertir en client">
+                                    <i class="bi bi-arrow-right-circle"></i>
+                                </a>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center py-4 text-muted">
+                            <i class="bi bi-funnel display-4 text-muted mb-3"></i>
+                            <br>Aucun prospect trouvé.
+                            {% if search or statut %}
+                                <br><small>Essayez de modifier vos critères de recherche.</small>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Pagination -->
+{% if prospects.has_other_pages %}
+<div class="d-flex justify-content-center mt-4">
+    <nav aria-label="Pagination prospects">
+        <ul class="pagination">
+            {% if prospects.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ prospects.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% if statut %}&statut={{ statut }}{% endif %}">
+                    <i class="bi bi-chevron-left"></i> Précédent
+                </a>
+            </li>
+            {% else %}
+            <li class="page-item disabled">
+                <span class="page-link"><i class="bi bi-chevron-left"></i> Précédent</span>
+            </li>
+            {% endif %}
+
+            {% for num in prospects.paginator.page_range %}
+                {% if prospects.number == num %}
+                <li class="page-item active">
+                    <span class="page-link">{{ num }}</span>
+                </li>
+                {% elif num > prospects.number|add:'-3' and num < prospects.number|add:'3' %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ num }}{% if search %}&search={{ search }}{% endif %}{% if statut %}&statut={{ statut }}{% endif %}">{{ num }}</a>
+                </li>
+                {% endif %}
+            {% endfor %}
+
+            {% if prospects.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ prospects.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% if statut %}&statut={{ statut }}{% endif %}">
+                    Suivant <i class="bi bi-chevron-right"></i>
+                </a>
+            </li>
+            {% else %}
+            <li class="page-item disabled">
+                <span class="page-link">Suivant <i class="bi bi-chevron-right"></i></span>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+</div>
+{% endif %}
+
+{% endblock %}

@@ -1,0 +1,204 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - FenyCare CRM{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h1><i class="bi bi-speedometer2"></i> Tableau de Bord</h1>
+            <p class="text-muted">Vue d'ensemble de votre activité</p>
+        </div>
+    </div>
+
+    <!-- KPIs Row 1 -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card border-primary">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted mb-1">Clients</h6>
+                            <h2 class="mb-0">{{ total_clients }}</h2>
+                            <small class="text-success">+{{ new_clients_30d }} ce mois</small>
+                        </div>
+                        <div class="fs-1 text-primary">
+                            <i class="bi bi-people"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card border-warning">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted mb-1">Prospects</h6>
+                            <h2 class="mb-0">{{ total_prospects }}</h2>
+                            <small class="text-info">{{ prospects_en_cours }} en cours</small>
+                        </div>
+                        <div class="fs-1 text-warning">
+                            <i class="bi bi-person-plus"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card border-success">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted mb-1">CA Total</h6>
+                            <h2 class="mb-0">{{ ca_total|floatformat:0 }}€</h2>
+                            <small class="text-success">+{{ ca_30d|floatformat:0 }}€ ce mois</small>
+                        </div>
+                        <div class="fs-1 text-success">
+                            <i class="bi bi-cash-coin"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card border-info">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted mb-1">Commandes</h6>
+                            <h2 class="mb-0">{{ total_commandes }}</h2>
+                            <small class="text-info">{{ commandes_30d }} ce mois</small>
+                        </div>
+                        <div class="fs-1 text-info">
+                            <i class="bi bi-box-seam"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- KPIs Row 2 -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="text-muted">Produits</h6>
+                    <h3>{{ total_produits }}</h3>
+                    {% if produits_stock_bas > 0 %}
+                    <small class="text-danger">
+                        <i class="bi bi-exclamation-triangle"></i> {{ produits_stock_bas }} en stock bas
+                    </small>
+                    {% else %}
+                    <small class="text-success">Stock OK</small>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="text-muted">Campagnes</h6>
+                    <h3>{{ campagnes_actives }}</h3>
+                    <small class="text-muted">{{ campagnes_30d }} ce mois</small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="text-muted">Taux Conversion</h6>
+                    <h3>{{ taux_conversion }}%</h3>
+                    <small class="text-muted">Prospects → Clients</small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="text-muted">Statut Commandes</h6>
+                    {% for statut in commandes_par_statut %}
+                    <div class="d-flex justify-content-between">
+                        <small>{{ statut.statut }}</small>
+                        <small><strong>{{ statut.count }}</strong></small>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Activités récentes -->
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="bi bi-clock-history"></i> Dernières Commandes</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush">
+                        {% for commande in dernieres_commandes %}
+                        <a href="{% url 'commande_detail' commande.pk %}" class="list-group-item list-group-item-action">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>{{ commande.numero_commande }}</strong><br>
+                                    <small class="text-muted">{{ commande.client.get_full_name }}</small>
+                                </div>
+                                <div class="text-end">
+                                    <span class="badge bg-{{ commande.statut|yesno:'success,warning,secondary' }}">
+                                        {{ commande.get_statut_display }}
+                                    </span><br>
+                                    <small class="text-muted">{{ commande.montant_total }}€</small>
+                                </div>
+                            </div>
+                        </a>
+                        {% empty %}
+                        <div class="list-group-item text-muted text-center">
+                            Aucune commande récente
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="bi bi-person-plus"></i> Derniers Prospects</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush">
+                        {% for prospect in derniers_prospects %}
+                        <a href="{% url 'prospect_detail' prospect.pk %}" class="list-group-item list-group-item-action">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>{{ prospect.get_full_name }}</strong><br>
+                                    <small class="text-muted">{{ prospect.email }}</small>
+                                </div>
+                                <div>
+                                    <span class="badge bg-{{ prospect.statut|yesno:'success,info,secondary' }}">
+                                        {{ prospect.get_statut_display }}
+                                    </span>
+                                </div>
+                            </div>
+                        </a>
+                        {% empty %}
+                        <div class="list-group-item text-muted text-center">
+                            Aucun prospect récent
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

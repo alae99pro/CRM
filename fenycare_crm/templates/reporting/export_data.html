@@ -1,0 +1,157 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Export de Données - FenyCare CRM{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h2 class="mb-0"><i class="bi bi-download text-secondary"></i> Export de Données</h2>
+        <p class="text-muted">Générez des rapports téléchargeables au format CSV/Excel.</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6 mx-auto">
+        <div class="card shadow-sm">
+            <div class="card-header bg-white">
+                <h5 class="card-title mb-0">Paramètres d'Exportation</h5>
+            </div>
+            <div class="card-body">
+                <form method="get" action="{% url 'export_data' %}" id="exportForm">
+                    <!-- Type de Données -->
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">1. Type de Données</label>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="radio" name="type" id="typeVentes" value="ventes"
+                                required {% if request.GET.type == 'ventes' or not request.GET.type %}checked{% endif %}>
+                            <label class="form-check-label" for="typeVentes">
+                                <i class="bi bi-graph-up text-primary me-2"></i> Données de Ventes (Commandes)
+                            </label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="radio" name="type" id="typeClients" value="clients">
+                            <label class="form-check-label" for="typeClients">
+                                <i class="bi bi-people text-success me-2"></i> Base Clients & Prospects
+                            </label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="radio" name="type" id="typeMarketing"
+                                value="marketing">
+                            <label class="form-check-label" for="typeMarketing">
+                                <i class="bi bi-megaphone text-purple me-2" style="color:#6f42c1;"></i> Campagnes
+                                Marketing
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="type" id="typeStock" value="stock" {% if request.GET.type == 'stock' %}checked{% endif %}>
+                            <label class="form-check-label" for="typeStock">
+                                <i class="bi bi-box-seam text-info me-2"></i> État des Stocks & Produits
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Période -->
+                    <div class="mb-4" id="periodeContainer">
+                        <label for="periodeSelect" class="form-label fw-bold">2. Période</label>
+                        <select class="form-select" id="periodeSelect" name="periode">
+                            <option value="7" {% if request.GET.periode == '7' %}selected{% endif %}>7 derniers jours
+                            </option>
+                            <option value="30" {% if request.GET.periode == '30' or not request.GET.periode %}selected{% endif %}>30 derniers jours</option>
+                            <option value="90" {% if request.GET.periode == '90' %}selected{% endif %}>3 derniers mois (90 jours)</option>
+                            <option value="365" {% if request.GET.periode == '365' %}selected{% endif %}>12 derniers mois</option>
+                            </option>
+                            <option value="all">Toutes les données (Historique complet)</option>
+                        </select>
+                        <div class="form-text">Note: Le filtre de période ne s'applique pas à l'export "État des Stocks"
+                            (instantané global).</div>
+                    </div>
+
+                    <!-- Format -->
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">3. Format d'Exportation</label>
+                        <div class="d-flex">
+                            <div class="form-check me-4">
+                                <input class="form-check-input" type="radio" name="format" id="formatCsv" value="csv"
+                                    checked>
+                                <label class="form-check-label" for="formatCsv">
+                                    <i class="bi bi-filetype-csv text-secondary me-1"></i> CSV (Recommandé)
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="format" id="formatExcel"
+                                    value="excel" disabled>
+                                <label class="form-check-label text-muted" for="formatExcel" title="Bientôt disponible">
+                                    <i class="bi bi-file-earmark-spreadsheet me-1"></i> Excel (.xlsx)
+                                    <span class="badge bg-light text-dark ms-1">Prochainement</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Submit -->
+                    <div class="d-grid mt-4">
+                        <button type="button" class="btn btn-primary btn-lg" id="generateExportBtn">
+                            <i class="bi bi-cloud-download me-2"></i> Générer l'Exportation
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Alerte Info (Bouchon MVP) -->
+        <div class="alert alert-info mt-4 d-none" id="exportMockAlert">
+            <i class="bi bi-info-circle-fill me-2"></i> <strong>Simulation MVP :</strong>
+            L'export CSV a été déclenché. Dans une version de production, le téléchargement d'un fichier réel
+            démarrerait ici.
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const radioStock = document.getElementById('typeStock');
+        const typeRadios = document.querySelectorAll('input[name="type"]');
+        const periodeSelect = document.getElementById('periodeSelect');
+
+        // Gérer l'état du select de période selon le type choisi
+        function updatePeriodeState() {
+            if (radioStock.checked) {
+                periodeSelect.value = 'all';
+                periodeSelect.disabled = true;
+            } else {
+                periodeSelect.disabled = false;
+            }
+        }
+
+        // Initialiser
+        updatePeriodeState();
+
+        // Écouter les changements
+        typeRadios.forEach(radio => {
+            radio.addEventListener('change', updatePeriodeState);
+        });
+
+        // Soumettre le vrai formulaire pour générer le CSV
+        document.getElementById('generateExportBtn').addEventListener('click', function () {
+            const btn = this;
+            
+            // Soumet le formulaire pour générer le CSV (requête GET)
+            document.getElementById('exportForm').submit();
+            
+            // Petite animation du bouton pour indiquer la prise en compte
+            const originalHtml = btn.innerHTML;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Téléchargement...';
+            btn.disabled = true;
+
+            // Réinitialiser le bouton après 2.5 secondes (estimation du temps de réponse)
+            setTimeout(() => {
+                btn.innerHTML = originalHtml;
+                btn.disabled = false;
+            }, 2500);
+        });
+    });
+</script>
+{% endblock %}

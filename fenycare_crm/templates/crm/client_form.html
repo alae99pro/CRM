@@ -1,0 +1,239 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ action }} Client - FenyCare CRM{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-card {
+        border-radius: 10px;
+        box-shadow: 0 2px 15px rgba(0, 0, 0, 0.1);
+    }
+
+    .form-section {
+        border-bottom: 1px solid #e9ecef;
+        padding-bottom: 20px;
+        margin-bottom: 20px;
+    }
+
+    .form-section:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+    }
+
+    .required-field::after {
+        content: " *";
+        color: #dc3545;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4 align-items-center">
+    <div class="col-md-6">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-2">
+                <li class="breadcrumb-item"><a href="{% url 'client_list' %}">Clients</a></li>
+                <li class="breadcrumb-item active">{{ action }} Client</li>
+            </ol>
+        </nav>
+        <h2 class="mb-0">
+            <i class="bi bi-{% if action == 'Créer' %}plus-circle text-success{% else %}pencil text-primary{% endif %}"></i>
+            {{ action }} un Client
+        </h2>
+    </div>
+    <div class="col-md-6 text-md-end">
+        <a href="{% url 'client_list' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Retour à la liste
+        </a>
+    </div>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card form-card">
+            <div class="card-header bg-white">
+                <h5 class="card-title mb-0">Informations du Client</h5>
+            </div>
+            <form method="post" novalidate>
+                {% csrf_token %}
+
+                <div class="card-body">
+                    <!-- Type de client -->
+                    <div class="form-section">
+                        <h6 class="text-muted mb-3">
+                            <i class="bi bi-tag"></i> Type de Client
+                        </h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label for="{{ form.type_client.id_for_label }}" class="form-label required-field">
+                                    {{ form.type_client.label }}
+                                </label>
+                                {{ form.type_client }}
+                                {% if form.type_client.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.type_client.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Informations personnelles -->
+                    <div class="form-section">
+                        <h6 class="text-muted mb-3">
+                            <i class="bi bi-person"></i> Informations Personnelles
+                        </h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label for="{{ form.nom.id_for_label }}" class="form-label required-field">
+                                    {{ form.nom.label }}
+                                </label>
+                                {{ form.nom }}
+                                {% if form.nom.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.nom.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="{{ form.prenom.id_for_label }}" class="form-label">
+                                    {{ form.prenom.label }}
+                                </label>
+                                {{ form.prenom }}
+                                {% if form.prenom.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.prenom.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="row mt-3">
+                            <div class="col-md-6">
+                                <label for="{{ form.date_naissance.id_for_label }}" class="form-label">
+                                    {{ form.date_naissance.label }}
+                                </label>
+                                {{ form.date_naissance }}
+                                {% if form.date_naissance.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.date_naissance.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Informations professionnelles -->
+                    <div class="form-section">
+                        <h6 class="text-muted mb-3">
+                            <i class="bi bi-building"></i> Informations Professionnelles
+                        </h6>
+                        <div class="row">
+                            <div class="col-md-12">
+                                <label for="{{ form.entreprise.id_for_label }}" class="form-label">
+                                    {{ form.entreprise.label }}
+                                </label>
+                                {{ form.entreprise }}
+                                {% if form.entreprise.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.entreprise.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Coordonnées -->
+                    <div class="form-section">
+                        <h6 class="text-muted mb-3">
+                            <i class="bi bi-telephone"></i> Coordonnées
+                        </h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label for="{{ form.email.id_for_label }}" class="form-label">
+                                    {{ form.email.label }}
+                                </label>
+                                {{ form.email }}
+                                {% if form.email.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.email.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="{{ form.telephone.id_for_label }}" class="form-label">
+                                    {{ form.telephone.label }}
+                                </label>
+                                {{ form.telephone }}
+                                {% if form.telephone.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.telephone.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Adresse -->
+                    <div class="form-section">
+                        <h6 class="text-muted mb-3">
+                            <i class="bi bi-geo-alt"></i> Adresse
+                        </h6>
+                        <div class="row">
+                            <div class="col-md-12">
+                                <label for="{{ form.adresse.id_for_label }}" class="form-label">
+                                    {{ form.adresse.label }}
+                                </label>
+                                {{ form.adresse }}
+                                {% if form.adresse.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.adresse.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="row mt-3">
+                            <div class="col-md-4">
+                                <label for="{{ form.code_postal.id_for_label }}" class="form-label">
+                                    {{ form.code_postal.label }}
+                                </label>
+                                {{ form.code_postal }}
+                                {% if form.code_postal.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.code_postal.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-8">
+                                <label for="{{ form.ville.id_for_label }}" class="form-label">
+                                    {{ form.ville.label }}
+                                </label>
+                                {{ form.ville }}
+                                {% if form.ville.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.ville.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-footer bg-light">
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'client_list' %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-circle"></i> Annuler
+                        </a>
+                        <button type="submit" class="btn btn-{% if action == 'Créer' %}success{% else %}primary{% endif %}">
+                            <i class="bi bi-check-circle"></i> {{ action }} le Client
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

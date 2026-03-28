@@ -1,0 +1,257 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Rapport Stock - FenyCare CRM{% endblock %}
+
+{% block extra_css %}
+<style>
+    .kpi-card {
+        transition: transform 0.2s;
+        border-radius: 10px;
+        border-left: 5px solid #0dcaf0;
+    }
+
+    .kpi-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    }
+
+    .kpi-icon {
+        font-size: 2.5rem;
+        color: #0dcaf0;
+        opacity: 0.8;
+    }
+
+    .kpi-value {
+        font-size: 1.8rem;
+        font-weight: bold;
+        color: #333;
+    }
+
+    .chart-container {
+        position: relative;
+        height: 350px;
+        width: 100%;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4 align-items-center">
+    <div class="col-md-6">
+        <h2 class="mb-0"><i class="bi bi-box-seam text-info"></i> Rapport Stock</h2>
+        <p class="text-muted">Analyse des stocks et prévisions d'approvisionnement</p>
+    </div>
+    <div class="col-md-6 text-md-end">
+        <a href="{% url 'export_data' %}?type=stock" class="btn btn-outline-secondary">
+            <i class="bi bi-download"></i> Exporter
+        </a>
+    </div>
+</div>
+
+<!-- KPIs Stock -->
+<div class="row mb-4">
+    <!-- Total Produits -->
+    <div class="col-md-3">
+        <div class="card kpi-card h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">Total Produits</h6>
+                        <div class="kpi-value">{{ stats.total_produits }}</div>
+                    </div>
+                    <div class="kpi-icon"><i class="bi bi-box2"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Produits Actifs -->
+    <div class="col-md-3">
+        <div class="card kpi-card h-100" style="border-left-color: #198754;">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">Produits Actifs</h6>
+                        <div class="kpi-value">{{ stats.produits_actifs }}</div>
+                    </div>
+                    <div class="kpi-icon" style="color: #198754;"><i class="bi bi-check-circle"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Produits Stock Bas -->
+    <div class="col-md-3">
+        <div class="card kpi-card h-100" style="border-left-color: #dc3545;">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">Alertes Stock</h6>
+                        <div class="kpi-value text-danger">{{ stats.produits_stock_bas }}</div>
+                    </div>
+                    <div class="kpi-icon" style="color: #dc3545;"><i class="bi bi-exclamation-triangle"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Valeur Totale Stock -->
+    <div class="col-md-3">
+        <div class="card kpi-card h-100" style="border-left-color: #ffc107;">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">Valeur du Stock</h6>
+                        <div class="kpi-value">{{ stats.valeur_totale_stock|floatformat:2 }} €</div>
+                    </div>
+                    <div class="kpi-icon" style="color: #ffc107;"><i class="bi bi-piggy-bank"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <!-- Graphique Produits les plus vendus (Barre Horizontale) -->
+    <div class="col-md-12">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">Rotation des Stocks : Top 10 (90 derniers jours)</h5>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="topVendusChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Alertes Stock Bas -->
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow-sm border-danger">
+            <div class="card-header bg-danger text-white d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0"><i class="bi bi-exclamation-octagon"></i> Produits en Rupture ou Stock
+                    Critique</h5>
+                {% if produits_stock_bas %}
+                <span class="badge bg-light text-danger rounded-pill">{{ stats.produits_stock_bas }} Alertes</span>
+                {% endif %}
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Produit</th>
+                                <th>Référence</th>
+                                <th class="text-center">Stock Actuel</th>
+                                <th class="text-center">Seuil d'Alerte</th>
+                                <th class="text-center">Statut</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for p in produits_stock_bas %}
+                            <tr>
+                                <td><strong>{{ p.nom }}</strong></td>
+                                <td>{{ p.reference|default:"-" }}</td>
+                                <td
+                                    class="text-center font-weight-bold {% if p.quantite_stock == 0 %}text-danger{% else %}text-warning{% endif %}">
+                                    {{ p.quantite_stock }}
+                                </td>
+                                <td class="text-center">{{ p.seuil_alerte }}</td>
+                                <td class="text-center">
+                                    {% if p.quantite_stock == 0 %}
+                                    <span class="badge bg-danger">Rupture</span>
+                                    {% else %}
+                                    <span class="badge bg-warning text-dark">Critique</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center py-4 text-success">
+                                    <i class="bi bi-check-circle fs-4 mb-2 d-block"></i>
+                                    Aucune alerte de stock bas actuellement. Tous les niveaux sont bons.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // ==== Graphique Rotation (Horizontal Bar) ====
+        const vendusCtx = document.getElementById('topVendusChart').getContext('2d');
+
+        const prodLabels = [];
+        const prodVendus = [];
+        const prodStock = [];
+
+        {% for p in produits_vendus %}
+        prodLabels.push("{{ p.produit__nom|escapejs }}");
+        prodVendus.push({{ p.quantite_vendue |default:0 }});
+    prodStock.push({{ p.produit__quantite_stock |default:0 }});
+    {% endfor %}
+
+    new Chart(vendusCtx, {
+        type: 'bar', // On utilise type 'bar'
+        data: {
+            labels: prodLabels,
+            datasets: [
+                {
+                    label: 'Quantité Vendue (90j)',
+                    data: prodVendus,
+                    backgroundColor: 'rgba(13, 110, 253, 0.7)', // Primary
+                    borderColor: '#0d6efd',
+                    borderWidth: 1,
+                    borderRadius: 4
+                },
+                {
+                    label: 'Stock Restant',
+                    data: prodStock,
+                    backgroundColor: 'rgba(25, 135, 84, 0.5)', // Success
+                    borderColor: '#198754',
+                    borderWidth: 1,
+                    borderRadius: 4
+                }
+            ]
+        },
+        options: {
+            indexAxis: 'y', // C'est ceci qui rend les barres horizontales dans Chart.js 4+
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'top' },
+                tooltip: {
+                    callbacks: {
+                        label: function (context) {
+                            return context.dataset.label + ': ' + context.parsed.x + ' unités';
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Quantité (unités)'
+                    }
+                },
+                y: {
+                    grid: { display: false }
+                }
+            }
+        }
+    });
+
+});
+</script>
+{% endblock %}

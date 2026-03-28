@@ -1,0 +1,201 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ prospect.get_full_name }} - FenyCare CRM{% endblock %}
+
+{% block extra_css %}
+<style>
+    .detail-card {
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .info-item {
+        padding: 8px 0;
+        border-bottom: 1px solid #f0f0f0;
+    }
+
+    .info-item:last-child {
+        border-bottom: none;
+    }
+
+    .info-label {
+        font-weight: 600;
+        color: #6c757d;
+        font-size: 0.9rem;
+    }
+
+    .interaction-item {
+        border-left: 4px solid #0d6efd;
+        background-color: #f8f9fa;
+        padding: 15px;
+        margin-bottom: 10px;
+        border-radius: 5px;
+    }
+
+    .interaction-item:hover {
+        background-color: #e9ecef;
+    }
+
+    .statut-badge {
+        font-size: 1.1rem;
+        padding: 8px 16px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4 align-items-center">
+    <div class="col-md-6">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-2">
+                <li class="breadcrumb-item"><a href="{% url 'prospect_list' %}">Prospects</a></li>
+                <li class="breadcrumb-item active">{{ prospect.get_full_name }}</li>
+            </ol>
+        </nav>
+        <h2 class="mb-0">
+            <i class="bi bi-person-circle text-primary"></i> {{ prospect.get_full_name }}
+            {% if prospect.entreprise %}
+                <small class="text-muted">({{ prospect.entreprise }})</small>
+            {% endif %}
+        </h2>
+    </div>
+    <div class="col-md-6 text-md-end">
+        <div class="btn-group" role="group">
+            <a href="{% url 'prospect_edit' prospect.pk %}" class="btn btn-primary">
+                <i class="bi bi-pencil"></i> Modifier
+            </a>
+            
+            {% if prospect.statut != 'gagne' and not prospect.converti_en_client %}
+            <a href="{% url 'prospect_convert' prospect.pk %}" class="btn btn-success">
+                <i class="bi bi-arrow-right-circle"></i> Convertir en Client
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="text-center">
+            <span class="badge bg-{% if prospect.statut == 'prospect' %}primary{% elif prospect.statut == 'en_cours' %}warning{% elif prospect.statut == 'gagne' %}success{% else %}danger{% endif %} statut-badge">
+                {{ prospect.get_statut_display }}
+            </span>
+            {% if prospect.converti_en_client %}
+                <div class="mt-2">
+                    <span class="badge bg-success">
+                        <i class="bi bi-check-circle"></i> Converti en client : {{ prospect.converti_en_client.get_full_name }}
+                    </span>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Informations Prospect -->
+    <div class="col-md-4">
+        <div class="card detail-card h-100">
+            <div class="card-header bg-white">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-info-circle text-primary"></i> Informations
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if prospect.responsable %}
+                <div class="info-item">
+                    <div class="info-label">Responsable</div>
+                    <div><i class="bi bi-person"></i> {{ prospect.responsable.get_full_name }}</div>
+                </div>
+                {% endif %}
+                {% if prospect.email %}
+                <div class="info-item">
+                    <div class="info-label">Email</div>
+                    <div><i class="bi bi-envelope"></i> <a href="mailto:{{ prospect.email }}">{{ prospect.email }}</a></div>
+                </div>
+                {% endif %}
+                {% if prospect.telephone %}
+                <div class="info-item">
+                    <div class="info-label">Téléphone</div>
+                    <div><i class="bi bi-telephone"></i> <a href="tel:{{ prospect.telephone }}">{{ prospect.telephone }}</a></div>
+                </div>
+                {% endif %}
+                {% if prospect.adresse %}
+                <div class="info-item">
+                    <div class="info-label">Adresse</div>
+                    <div><i class="bi bi-geo-alt"></i> {{ prospect.adresse }}</div>
+                </div>
+                {% endif %}
+                {% if prospect.code_postal and prospect.ville %}
+                <div class="info-item">
+                    <div class="info-label">Ville</div>
+                    <div>{{ prospect.code_postal }} {{ prospect.ville }}</div>
+                </div>
+                {% endif %}
+                {% if prospect.source %}
+                <div class="info-item">
+                    <div class="info-label">Source</div>
+                    <div><i class="bi bi-flag"></i> {{ prospect.get_source_display }}</div>
+                </div>
+                {% endif %}
+                {% if prospect.montant_estime %}
+                <div class="info-item">
+                    <div class="info-label">Montant Estimé</div>
+                    <div><i class="bi bi-currency-euro"></i> <strong class="text-success">{{ prospect.montant_estime|floatformat:0 }} €</strong></div>
+                </div>
+                {% endif %}
+                {% if prospect.date_creation %}
+                <div class="info-item">
+                    <div class="info-label">Créé le</div>
+                    <div><i class="bi bi-calendar-plus"></i> {{ prospect.date_creation|date:"d/m/Y à H:i" }}</div>
+                </div>
+                {% endif %}
+                {% if prospect.date_conversion %}
+                <div class="info-item">
+                    <div class="info-label">Converti le</div>
+                    <div><i class="bi bi-check-circle text-success"></i> {{ prospect.date_conversion|date:"d/m/Y à H:i" }}</div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Dernières Interactions -->
+    <div class="col-md-8">
+        <div class="card detail-card">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-chat-dots text-info"></i> Dernières Interactions
+                </h5>
+                
+            </div>
+            <div class="card-body">
+                {% for interaction in interactions %}
+                <div class="interaction-item">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="flex-grow-1">
+                            <div class="d-flex align-items-center mb-2">
+                                <span class="badge bg-{% if interaction.type == 'appel' %}success{% elif interaction.type == 'email' %}primary{% elif interaction.type == 'reunion' %}warning{% else %}secondary{% endif %} me-2">
+                                    {{ interaction.get_type_display }}
+                                </span>
+                                <small class="text-muted">{{ interaction.date|date:"d/m/Y à H:i" }}</small>
+                            </div>
+                            <p class="mb-1">{{ interaction.description }}</p>
+                            <small class="text-muted">
+                                <i class="bi bi-person"></i> {{ interaction.utilisateur.get_full_name }}
+                            </small>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="text-center py-4 text-muted">
+                    <i class="bi bi-chat-dots display-4 text-muted mb-3"></i>
+                    <br>Aucune interaction enregistrée.
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

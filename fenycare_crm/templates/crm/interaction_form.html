@@ -1,0 +1,294 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Nouvelle Interaction - FenyCare CRM{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-card {
+        border-radius: 10px;
+        box-shadow: 0 2px 15px rgba(0, 0, 0, 0.1);
+    }
+
+    .interaction-preview {
+        background-color: #f8f9fa;
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+        padding: 15px;
+        margin-top: 20px;
+    }
+
+    .contact-info {
+        background-color: #e7f3ff;
+        border: 1px solid #b3d7ff;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+
+    .required-field::after {
+        content: " *";
+        color: #dc3545;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4 align-items-center">
+    <div class="col-md-6">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-2">
+                {% if client %}
+                    <li class="breadcrumb-item"><a href="{% url 'client_list' %}">Clients</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'client_detail' client.pk %}">{{ client.get_full_name }}</a></li>
+                {% elif prospect %}
+                    <li class="breadcrumb-item"><a href="{% url 'prospect_list' %}">Prospects</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'prospect_detail' prospect.pk %}">{{ prospect.get_full_name }}</a></li>
+                {% else %}
+                    <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
+                {% endif %}
+                <li class="breadcrumb-item active">Nouvelle Interaction</li>
+            </ol>
+        </nav>
+        <h2 class="mb-0">
+            <i class="bi bi-chat-dots text-info"></i> Nouvelle Interaction
+        </h2>
+        <p class="text-muted">Enregistrer une nouvelle interaction</p>
+    </div>
+    <div class="col-md-6 text-md-end">
+        {% if client %}
+            <a href="{% url 'client_detail' client.pk %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Retour au client
+            </a>
+        {% elif prospect %}
+            <a href="{% url 'prospect_detail' prospect.pk %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Retour au prospect
+            </a>
+        {% else %}
+            <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Retour au dashboard
+            </a>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Informations du contact -->
+{% if client or prospect %}
+<div class="contact-info">
+    <h6 class="mb-2">
+        <i class="bi bi-person-circle text-primary"></i>
+        {% if client %}Client{% else %}Prospect{% endif %} concerné :
+    </h6>
+    <div class="row">
+        <div class="col-md-6">
+            <strong>
+                {% if client %}{{ client.get_full_name }}{% else %}{{ prospect.get_full_name }}{% endif %}
+                {% if client and client.entreprise %} ({{ client.entreprise }})
+                {% elif prospect and prospect.entreprise %} ({{ prospect.entreprise }}){% endif %}
+            </strong>
+        </div>
+        <div class="col-md-6">
+            {% if client and client.email %}
+                <i class="bi bi-envelope"></i> <a href="mailto:{{ client.email }}">{{ client.email }}</a>
+            {% elif prospect and prospect.email %}
+                <i class="bi bi-envelope"></i> <a href="mailto:{{ prospect.email }}">{{ prospect.email }}</a>
+            {% endif %}
+            {% if client and client.telephone %}
+                <br><i class="bi bi-telephone"></i> <a href="tel:{{ client.telephone }}">{{ client.telephone }}</a>
+            {% elif prospect and prospect.telephone %}
+                <br><i class="bi bi-telephone"></i> <a href="tel:{{ prospect.telephone }}">{{ prospect.telephone }}</a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card form-card">
+            <div class="card-header bg-white">
+                <h5 class="card-title mb-0">Détails de l'Interaction</h5>
+            </div>
+            <form method="post" novalidate id="interactionForm">
+                {% csrf_token %}
+
+                <div class="card-body">
+                    <!-- Type et date -->
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="{{ form.type.id_for_label }}" class="form-label required-field">
+                                {{ form.type.label }}
+                            </label>
+                            {{ form.type }}
+                            {% if form.type.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.type.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label for="{{ form.date.id_for_label }}" class="form-label required-field">
+                                {{ form.date.label }}
+                            </label>
+                            {{ form.date }}
+                            {% if form.date.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.date.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Description -->
+                    <div class="mb-3">
+                        <label for="{{ form.description.id_for_label }}" class="form-label required-field">
+                            {{ form.description.label }}
+                        </label>
+                        {{ form.description }}
+                        {% if form.description.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.description.errors.0 }}
+                            </div>
+                        {% endif %}
+                        <div class="form-text">
+                            Décrivez l'interaction de manière détaillée (objet de l'appel, contenu de la réunion, etc.)
+                        </div>
+                    </div>
+
+                    <!-- Notes internes (optionnel) -->
+                    <div class="mb-3">
+                        <label for="{{ form.notes_internes.id_for_label }}" class="form-label">
+                            {{ form.notes_internes.label }}
+                        </label>
+                        {{ form.notes_internes }}
+                        {% if form.notes_internes.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.notes_internes.errors.0 }}
+                            </div>
+                        {% endif %}
+                        <div class="form-text">
+                            Notes internes non visibles par le client/prospect (optionnel)
+                        </div>
+                    </div>
+
+                    <!-- Suivi nécessaire -->
+                    <div class="mb-3">
+                        <div class="form-check">
+                            {{ form.suivi_necessaire }}
+                            <label for="{{ form.suivi_necessaire.id_for_label }}" class="form-check-label">
+                                {{ form.suivi_necessaire.label }}
+                            </label>
+                        </div>
+                        {% if form.suivi_necessaire.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.suivi_necessaire.errors.0 }}
+                            </div>
+                        {% endif %}
+                        <div class="form-text">
+                            Cochez cette case si un suivi est nécessaire pour cette interaction
+                        </div>
+                    </div>
+
+                    <!-- Date de suivi (conditionnel) -->
+                    <div class="mb-3" id="dateSuiviGroup" style="display: none;">
+                        <label for="{{ form.date_suivi.id_for_label }}" class="form-label">
+                            {{ form.date_suivi.label }}
+                        </label>
+                        {{ form.date_suivi }}
+                        {% if form.date_suivi.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.date_suivi.errors.0 }}
+                            </div>
+                        {% endif %}
+                        <div class="form-text">
+                            Date prévue pour le suivi de cette interaction
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-footer bg-light">
+                    <div class="d-flex justify-content-between">
+                        {% if client %}
+                            <a href="{% url 'client_detail' client.pk %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-circle"></i> Annuler
+                            </a>
+                        {% elif prospect %}
+                            <a href="{% url 'prospect_detail' prospect.pk %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-circle"></i> Annuler
+                            </a>
+                        {% else %}
+                            <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-circle"></i> Annuler
+                            </a>
+                        {% endif %}
+                        <button type="submit" class="btn btn-info">
+                            <i class="bi bi-check-circle"></i> Enregistrer l'Interaction
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- Aperçu de l'interaction -->
+        <div class="interaction-preview" id="interactionPreview" style="display: none;">
+            <h6 class="text-muted mb-3">
+                <i class="bi bi-eye"></i> Aperçu de l'interaction
+            </h6>
+            <div id="previewContent">
+                <!-- Contenu généré par JavaScript -->
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const suiviCheck = document.getElementById('{{ form.suivi_necessaire.id_for_label }}');
+    const dateSuiviGroup = document.getElementById('dateSuiviGroup');
+
+    // Afficher/masquer la date de suivi
+    if (suiviCheck) {
+        suiviCheck.addEventListener('change', function() {
+            if (this.checked) {
+                dateSuiviGroup.style.display = 'block';
+            } else {
+                dateSuiviGroup.style.display = 'none';
+            }
+        });
+    }
+
+    // Aperçu en temps réel (optionnel)
+    const form = document.getElementById('interactionForm');
+    const preview = document.getElementById('interactionPreview');
+    const previewContent = document.getElementById('previewContent');
+
+    if (form && preview) {
+        form.addEventListener('input', function() {
+            const type = document.getElementById('{{ form.type.id_for_label }}').value;
+            const description = document.getElementById('{{ form.description.id_for_label }}').value;
+
+            if (type && description) {
+                preview.style.display = 'block';
+                previewContent.innerHTML = `
+                    <div class="d-flex align-items-center mb-2">
+                        <span class="badge bg-${type === 'appel' ? 'success' : type === 'email' ? 'primary' : type === 'reunion' ? 'warning' : 'secondary'} me-2">
+                            ${type.charAt(0).toUpperCase() + type.slice(1)}
+                        </span>
+                        <small class="text-muted">Aujourd'hui à ${new Date().toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'})}</small>
+                    </div>
+                    <p class="mb-1">${description}</p>
+                    <small class="text-muted">
+                        <i class="bi bi-person"></i> {{ user.get_full_name }}
+                    </small>
+                `;
+            } else {
+                preview.style.display = 'none';
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

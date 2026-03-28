@@ -1,0 +1,296 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Rapport Clients - FenyCare CRM{% endblock %}
+
+{% block extra_css %}
+<style>
+    .kpi-card {
+        transition: transform 0.2s;
+        border-radius: 10px;
+        border-left: 5px solid #198754;
+    }
+
+    .kpi-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    }
+
+    .kpi-icon {
+        font-size: 2.5rem;
+        color: #198754;
+        opacity: 0.8;
+    }
+
+    .kpi-value {
+        font-size: 1.8rem;
+        font-weight: bold;
+        color: #333;
+    }
+
+    .chart-container {
+        position: relative;
+        height: 350px;
+        width: 100%;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4 align-items-center">
+    <div class="col-md-6">
+        <h2 class="mb-0"><i class="bi bi-people text-success"></i> Rapport Clients</h2>
+        <p class="text-muted">Analyse de la base clients et prospects</p>
+    </div>
+    <div class="col-md-6 text-md-end">
+        <form class="d-inline-block" method="get">
+            <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-calendar3"></i></span>
+                <select name="periode" class="form-select" onchange="this.form.submit()">
+                    <option value="7" {% if periode == '7' %}selected{% endif %}>7 derniers jours</option>
+                    <option value="30" {% if periode == '30' %}selected{% endif %}>30 derniers jours</option>
+                    <option value="90" {% if periode == '90' %}selected{% endif %}>3 derniers mois</option>
+                    <option value="365" {% if periode == '365' %}selected{% endif %}>12 derniers mois</option>
+                </select>
+                <a href="{% url 'export_data' %}?type=clients&periode={{ periode }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-download"></i> Exporter
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- KPIs Clients -->
+<div class="row mb-4">
+    <!-- Total Clients -->
+    <div class="col-md-3">
+        <div class="card kpi-card h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">Total Clients</h6>
+                        <div class="kpi-value">{{ stats.total_clients }}</div>
+                    </div>
+                    <div class="kpi-icon"><i class="bi bi-person-check"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Nouveaux Clients -->
+    <div class="col-md-3">
+        <div class="card kpi-card h-100" style="border-left-color: #0d6efd;">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">Nouveaux (période)</h6>
+                        <div class="kpi-value">{{ stats.nouveaux_clients }}</div>
+                    </div>
+                    <div class="kpi-icon" style="color: #0d6efd;"><i class="bi bi-person-plus"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Taux de conversion -->
+    <div class="col-md-3">
+        <div class="card kpi-card h-100" style="border-left-color: #ffc107;">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">Taux Conversion</h6>
+                        <div class="kpi-value">{{ taux_conversion|floatformat:1 }}%</div>
+                    </div>
+                    <div class="kpi-icon" style="color: #ffc107;"><i class="bi bi-funnel"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Total Prospects -->
+    <div class="col-md-3">
+        <div class="card kpi-card h-100" style="border-left-color: #6c757d;">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">Prospects Actifs</h6>
+                        <div class="kpi-value">{{ stats.prospects_actifs }} / {{ stats.total_prospects }}</div>
+                    </div>
+                    <div class="kpi-icon" style="color: #6c757d;"><i class="bi bi-person-lines-fill"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <!-- Graphique Répartition Clients -->
+    <div class="col-md-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-white">
+                <h5 class="card-title mb-0">Répartition des Clients</h5>
+            </div>
+            <div class="card-body d-flex justify-content-center align-items-center">
+                <div class="chart-container" style="height: 300px;">
+                    <canvas id="clientDistributionChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Graphique Entonnoir Prospects -->
+    <div class="col-md-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-white">
+                <h5 class="card-title mb-0">Statut des Prospects</h5>
+            </div>
+            <div class="card-body d-flex justify-content-center align-items-center">
+                <div class="chart-container" style="height: 300px;">
+                    <canvas id="prospectFunnelChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Top Clients -->
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow-sm">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0"><i class="bi bi-star-fill text-warning"></i> Top 10 Clients (par CA généré
+                    sur la période)</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover table-striped mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Client</th>
+                                <th>Type</th>
+                                <th class="text-center">Email</th>
+                                <th class="text-end">CA Généré</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for c in top_clients %}
+                            <tr>
+                                <td>
+                                    <strong>{{ c.nom }} {{ c.prenom|default:"" }}</strong>
+                                    {% if c.entreprise %}<br><small class="text-muted">{{ c.entreprise }}</small>{% endif %}
+                                </td>
+                                <td><span class="badge bg-info">{{ c.get_type_client_display|default:c.type_client }}</span></td>
+                                <td class="text-center">{{ c.email|default:"-" }}</td>
+                                <td class="text-end fw-bold text-success">{{ c.ca|floatformat:2 }} €</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4" class="text-center py-4 text-muted">Aucun client ayant généré du CA sur
+                                    cette période.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // ==== Graphique Répartition Clients (Pie) ====
+        const distCtx = document.getElementById('clientDistributionChart').getContext('2d');
+
+        const typesLabels = [];
+        const typesData = [];
+        const typesColors = ['#198754', '#0d6efd', '#ffc107', '#dc3545', '#0dcaf0'];
+
+        {% for type in clients_par_type %}
+        typesLabels.push("{{ type.type_client|title }}");
+        typesData.push({{ type.count |default:0 }});
+    {% endfor %}
+
+    new Chart(distCtx, {
+        type: 'pie',
+        data: {
+            labels: typesLabels.length > 0 ? typesLabels : ['Aucune donnée'],
+            datasets: [{
+                data: typesData.length > 0 ? typesData : [1],
+                backgroundColor: typesData.length > 0 ? typesColors : ['#e9ecef'],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'right' },
+                tooltip: {
+                    callbacks: {
+                        label: function (context) {
+                            if (typesData.length === 0) return 'Aucune donnée';
+                            let label = context.label || '';
+                            if (label) label += ': ';
+                            label += context.parsed + ' client(s)';
+                            return label;
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    // ==== Graphique Statut Prospects (Bar) ====
+    const prospectCtx = document.getElementById('prospectFunnelChart').getContext('2d');
+
+    const prospectLabels = ['Nouveau', 'En Cours', 'Gagné', 'Perdu'];
+    const prospectData = [
+        {{ prospects_stats.prospect |default:0 }},
+    {{ prospects_stats.en_cours |default:0 }},
+    {{ prospects_stats.gagne |default:0 }},
+    {{ prospects_stats.perdu |default:0 }}
+    ];
+
+    new Chart(prospectCtx, {
+        type: 'bar',
+        data: {
+            labels: prospectLabels,
+            datasets: [{
+                label: 'Nombre de prospects',
+                data: prospectData,
+                backgroundColor: [
+                    'rgba(13, 110, 253, 0.7)',  // Primary
+                    'rgba(255, 193, 7, 0.7)',   // Warning
+                    'rgba(25, 135, 84, 0.7)',   // Success
+                    'rgba(220, 53, 69, 0.7)'    // Danger
+                ],
+                borderColor: [
+                    '#0d6efd',
+                    '#ffc107',
+                    '#198754',
+                    '#dc3545'
+                ],
+                borderWidth: 1,
+                borderRadius: 5
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
+                    }
+                }
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

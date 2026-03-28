@@ -1,0 +1,299 @@
+route de ma {% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Rapport des Ventes - FenyCare CRM{% endblock %}
+
+{% block extra_css %}
+<style>
+    .kpi-card {
+        transition: transform 0.2s;
+        border-radius: 10px;
+        border-left: 5px solid #0d6efd;
+    }
+
+    .kpi-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    }
+
+    .kpi-icon {
+        font-size: 2.5rem;
+        color: #0d6efd;
+        opacity: 0.8;
+    }
+
+    .kpi-value {
+        font-size: 1.8rem;
+        font-weight: bold;
+        color: #333;
+    }
+
+    .chart-container {
+        position: relative;
+        height: 350px;
+        width: 100%;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4 align-items-center">
+    <div class="col-md-6">
+        <h2 class="mb-0"><i class="bi bi-graph-up text-primary"></i> Rapport des Ventes</h2>
+        <p class="text-muted">Analyse des performances commerciales</p>
+    </div>
+    <div class="col-md-6 text-md-end">
+        <form class="d-inline-block" method="get">
+            <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-calendar3"></i></span>
+                <select name="periode" class="form-select" onchange="this.form.submit()">
+                    <option value="7" {% if periode == '7' %}selected{% endif %}>7 derniers jours</option>
+                    <option value="30" {% if periode == '30' %}selected{% endif %}>30 derniers jours</option>
+                    <option value="90" {% if periode == '90' %}selected{% endif %}>3 derniers mois</option>
+                    <option value="365" {% if periode == '365' %}selected{% endif %}>12 derniers mois</option>
+                </select>
+                <a href="{% url 'export_data' %}?type=ventes&periode={{ periode }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-download"></i> Exporter
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- KPIs -->
+<div class="row mb-4">
+    <!-- CA Total -->
+    <div class="col-md-3">
+        <div class="card kpi-card h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">Chiffre d'Affaires</h6>
+                        <div class="kpi-value">{{ stats.ca_total|floatformat:2 }} €</div>
+                    </div>
+                    <div class="kpi-icon"><i class="bi bi-currency-euro"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Total Commandes -->
+    <div class="col-md-3">
+        <div class="card kpi-card h-100" style="border-left-color: #198754;">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">Commandes Livrées</h6>
+                        <div class="kpi-value">{{ stats.total_commandes }}</div>
+                    </div>
+                    <div class="kpi-icon" style="color: #198754;"><i class="bi bi-cart-check"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Panier Moyen -->
+    <div class="col-md-3">
+        <div class="card kpi-card h-100" style="border-left-color: #ffc107;">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">Panier Moyen</h6>
+                        <div class="kpi-value">{{ stats.panier_moyen|floatformat:2 }} €</div>
+                    </div>
+                    <div class="kpi-icon" style="color: #ffc107;"><i class="bi bi-basket"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Commandes en cours -->
+    <div class="col-md-3">
+        <div class="card kpi-card h-100" style="border-left-color: #dc3545;">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">Cmd en Cours</h6>
+                        <div class="kpi-value">{{ stats.commandes_en_cours }}</div>
+                    </div>
+                    <div class="kpi-icon" style="color: #dc3545;"><i class="bi bi-hourglass-split"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <!-- Évolution des ventes (Graphique Ligne) -->
+    <div class="col-md-8">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-white">
+                <h5 class="card-title mb-0">Évolution du Chiffre d'Affaires</h5>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="salesChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Répartition par Client (Graphique Camembert/Donut) -->
+    <div class="col-md-4">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-white">
+                <h5 class="card-title mb-0">Ventes par Type de Client</h5>
+            </div>
+            <div class="card-body d-flex justify-content-center align-items-center">
+                <div class="chart-container" style="height: 300px;">
+                    <canvas id="clientTypeChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Top Produits -->
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow-sm">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0"><i class="bi bi-trophy text-warning"></i> Top 10 des Produits (par CA)</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover table-striped mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Produit</th>
+                                <th class="text-center">Quantité Vendue</th>
+                                <th class="text-end">Chiffre d'Affaires</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for p in top_produits %}
+                            <tr>
+                                <td><strong>{{ p.produit__nom }}</strong></td>
+                                <td class="text-center">{{ p.quantite_vendue }}</td>
+                                <td class="text-end fw-bold text-success">{{ p.ca|floatformat:2 }} €</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="3" class="text-center py-4 text-muted">Aucuune donnée produit sur cette
+                                    période.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // ==== Graphique d'évolution des ventes (Ligne) ====
+        const salesCtx = document.getElementById('salesChart').getContext('2d');
+
+        // Extraction des données Django vers JS (sécurisé avec json_script ou parsing)
+        // Ici on construit les arrays manuellement depuis le context Django
+        const dates = [];
+        const revenues = [];
+
+        {% for v in ventes_par_jour %}
+        // On formate la date en JS pour plus de fiabilité ou on prend directement le format de Django
+        dates.push("{{ v.jour|date:'d M Y' }}");
+        revenues.push({{ v.ca |default:0 |stringformat:"f" }});
+    {% endfor %}
+
+    new Chart(salesCtx, {
+        type: 'line',
+        data: {
+            labels: dates,
+            datasets: [{
+                label: "Chiffre d'Affaires (€)",
+                data: revenues,
+                borderColor: '#0d6efd',
+                backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                borderWidth: 2,
+                pointBackgroundColor: '#0d6efd',
+                pointRadius: 4,
+                pointHoverRadius: 6,
+                fill: true,
+                tension: 0.3 // Rend la ligne courbée
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function (context) {
+                            return context.parsed.y.toFixed(2) + ' €';
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function (value) { return value + ' €'; }
+                    },
+                    grid: { color: 'rgba(0, 0, 0, 0.05)' }
+                },
+                x: {
+                    grid: { display: false }
+                }
+            }
+        }
+    });
+
+    // ==== Graphique Type de client (Doughnut) ====
+    const clientTypeCtx = document.getElementById('clientTypeChart').getContext('2d');
+
+    const clientLabels = [];
+    const clientRevenues = [];
+    const backgroundColors = ['#0d6efd', '#198754', '#ffc107', '#dc3545', '#6f42c1'];
+
+    {% for t in ventes_par_type %}
+    clientLabels.push("{{ t.client__type_client|title }}");
+    clientRevenues.push({{ t.ca |default:0 |stringformat:"f" }});
+    {% endfor %}
+
+    new Chart(clientTypeCtx, {
+        type: 'doughnut',
+        data: {
+            labels: clientLabels.length > 0 ? clientLabels : ['Aucune donnée'],
+            datasets: [{
+                data: clientRevenues.length > 0 ? clientRevenues : [1],
+                backgroundColor: clientRevenues.length > 0 ? backgroundColors : ['#e9ecef'],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '65%',
+            plugins: {
+                legend: { position: 'bottom' },
+                tooltip: {
+                    callbacks: {
+                        label: function (context) {
+                            if (clientRevenues.length === 0) return 'Aucune donnée';
+                            let label = context.label || '';
+                            if (label) label += ': ';
+                            label += context.parsed.toFixed(2) + ' €';
+                            return label;
+                        }
+                    }
+                }
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,31 @@
+# Django et extensions
+Django==5.0.1
+django-environ==0.11.2
+django-crispy-forms==2.1
+crispy-bootstrap5>=2023.10
+django-bootstrap5==23.4
+
+# Base de données
+mysqlclient==2.2.1
+
+# API et Webhooks
+djangorestframework==3.14.0
+requests==2.31.0
+
+# Tâches asynchrones
+celery==5.3.6
+redis==5.0.1
+
+# Email
+django-ses==3.5.2
+
+# Outils de développement
+python-decouple==3.8
+#Pillow==10.2.0
+
+# Export PDF/CSV
+reportlab==4.0.9
+#pandas==2.2.0
+
+# Dates et timezone
+python-dateutil==2.8.2

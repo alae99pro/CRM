@@ -1,0 +1,290 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Rapport Marketing - FenyCare CRM{% endblock %}
+
+{% block extra_css %}
+<style>
+    .kpi-card {
+        transition: transform 0.2s;
+        border-radius: 10px;
+        border-left: 5px solid #6f42c1;
+    }
+
+    .kpi-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    }
+
+    .kpi-icon {
+        font-size: 2.5rem;
+        color: #6f42c1;
+        opacity: 0.8;
+    }
+
+    .kpi-value {
+        font-size: 1.8rem;
+        font-weight: bold;
+        color: #333;
+    }
+
+    .chart-container {
+        position: relative;
+        height: 350px;
+        width: 100%;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4 align-items-center">
+    <div class="col-md-6">
+        <h2 class="mb-0"><i class="bi bi-megaphone text-purple" style="color: #6f42c1;"></i> Rapport Marketing</h2>
+        <p class="text-muted">Analyse des performances des campagnes email</p>
+    </div>
+    <div class="col-md-6 text-md-end">
+        <form class="d-inline-block" method="get">
+            <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-calendar3"></i></span>
+                <select name="periode" class="form-select" onchange="this.form.submit()">
+                    <option value="7" {% if periode == '7' %}selected{% endif %}>7 derniers jours</option>
+                    <option value="30" {% if periode == '30' %}selected{% endif %}>30 derniers jours</option>
+                    <option value="90" {% if periode == '90' %}selected{% endif %}>3 derniers mois</option>
+                    <option value="365" {% if periode == '365' %}selected{% endif %}>12 derniers mois</option>
+                </select>
+                <a href="{% url 'export_data' %}?type=marketing&periode={{ periode }}"
+                    class="btn btn-outline-secondary">
+                    <i class="bi bi-download"></i> Exporter
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- KPIs Marketing -->
+<div class="row mb-4">
+    <!-- Total Campagnes -->
+    <div class="col-md-3">
+        <div class="card kpi-card h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">Campagnes (Actives)</h6>
+                        <div class="kpi-value">{{ stats.total_campagnes }} ({{ stats.campagnes_actives }})</div>
+                    </div>
+                    <div class="kpi-icon"><i class="bi bi-bullseye"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Emails Envoyés -->
+    <div class="col-md-3">
+        <div class="card kpi-card h-100" style="border-left-color: #0dcaf0;">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">Emails Envoyés</h6>
+                        <div class="kpi-value">{{ stats.total_emails }}</div>
+                    </div>
+                    <div class="kpi-icon" style="color: #0dcaf0;"><i class="bi bi-envelope-paper"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Taux d'ouverture -->
+    <div class="col-md-3">
+        <div class="card kpi-card h-100" style="border-left-color: #198754;">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">Taux d'Ouverture</h6>
+                        <div class="kpi-value">{{ stats.taux_ouverture|floatformat:1 }}%</div>
+                    </div>
+                    <div class="kpi-icon" style="color: #198754;"><i class="bi bi-envelope-open"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Taux de clic -->
+    <div class="col-md-3">
+        <div class="card kpi-card h-100" style="border-left-color: #ffc107;">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">Taux de Clic</h6>
+                        <div class="kpi-value">{{ stats.taux_clic|floatformat:1 }}%</div>
+                    </div>
+                    <div class="kpi-icon" style="color: #ffc107;"><i class="bi bi-hand-index-thumb"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <!-- Évolution des envois (Graphique combiné Ligne/Barre) -->
+    <div class="col-md-12">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-white">
+                <h5 class="card-title mb-0">Évolution des Envois et Ouvertures</h5>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="emailsChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Performance par Campagne -->
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow-sm">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0"><i class="bi bi-list-stars text-purple" style="color:#6f42c1;"></i>
+                    Performance des Dernières Campagnes</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover table-striped mb-0 align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Nom de la Campagne</th>
+                                <th>Statut</th>
+                                <th class="text-center">Emails Envoyés</th>
+                                <th>Taux d'Ouverture</th>
+                                <th>Taux de Clic</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for c in campagnes_perf %}
+                            <tr>
+                                <td><strong>{{ c.nom }}</strong><br><small class="text-muted">{{ c.sujet }}</small></td>
+                                <td>
+                                    {% if c.statut == 'active' %}
+                                    <span class="badge bg-success">Active</span>
+                                    {% elif c.statut == 'brouillon' %}
+                                    <span class="badge bg-secondary">Brouillon</span>
+                                    {% else %}
+                                    <span class="badge bg-info">{{ c.get_statut_display|default:c.statut }}</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">{{ c.emails_envoyes }}</td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <span class="me-2">{{ c.taux_ouverture|floatformat:1 }}%</span>
+                                        <div class="progress flex-grow-1" style="height: 8px;">
+                                            <div class="progress-bar bg-success" role="progressbar"
+                                                style="width: {{ c.taux_ouverture|floatformat:0 }}%"
+                                                aria-valuenow="{{ c.taux_ouverture|floatformat:0 }}" aria-valuemin="0"
+                                                aria-valuemax="100"></div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <span class="me-2">{{ c.taux_clic|floatformat:1 }}%</span>
+                                        <div class="progress flex-grow-1" style="height: 8px;">
+                                            <div class="progress-bar bg-warning" role="progressbar"
+                                                style="width: {{ c.taux_clic|floatformat:0 }}%"
+                                                aria-valuenow="{{ c.taux_clic|floatformat:0 }}" aria-valuemin="0"
+                                                aria-valuemax="100"></div>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center py-4 text-muted">Aucune campagne associée à des
+                                    emails envoyés sur cette période.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // ==== Graphique Envois / Ouvertures (Bar/Line Combo) ====
+        const emailsCtx = document.getElementById('emailsChart').getContext('2d');
+
+        const datesLabels = [];
+        const envoyesData = [];
+        const ouvertsData = [];
+
+        {% for jour in emails_par_jour %}
+        datesLabels.push("{{ jour.jour|date:'d M' }}");
+        envoyesData.push({{ jour.envoyes |default:0 }});
+    ouvertsData.push({{ jour.ouverts |default:0 }});
+    {% endfor %}
+
+    new Chart(emailsCtx, {
+        type: 'bar',
+        data: {
+            labels: datesLabels,
+            datasets: [
+                {
+                    type: 'line',
+                    label: 'Emails Ouverts',
+                    data: ouvertsData,
+                    borderColor: '#198754', // Success (green)
+                    backgroundColor: '#198754',
+                    borderWidth: 2,
+                    tension: 0.3,
+                    fill: false,
+                    yAxisID: 'y'
+                },
+                {
+                    type: 'bar',
+                    label: 'Emails Envoyés',
+                    data: envoyesData,
+                    backgroundColor: 'rgba(13, 202, 240, 0.5)', // Info (light blue)
+                    borderColor: '#0dcaf0',
+                    borderWidth: 1,
+                    borderRadius: 4,
+                    yAxisID: 'y'
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
+            plugins: {
+                legend: { position: 'top' },
+                tooltip: {
+                    callbacks: {
+                        label: function (context) {
+                            return context.dataset.label + ': ' + context.parsed.y;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    type: 'linear',
+                    display: true,
+                    position: 'left',
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Nombre d\'emails'
+                    }
+                }
+            }
+        }
+    });
+});
+</script>
+{% endblock %}
